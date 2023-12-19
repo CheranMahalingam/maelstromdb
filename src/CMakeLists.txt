@@ -51,7 +51,7 @@ add_library(maelstromdb_lib
   cli/write.cpp
   utils/logger.cpp)
 target_link_libraries(maelstromdb_lib
-  PRIVATE
+  PUBLIC
   grpc_raft_proto
   grpc_log_proto)
 target_include_directories(maelstromdb_lib

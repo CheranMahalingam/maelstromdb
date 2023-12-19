@@ -5,17 +5,9 @@ add_executable(
   unit/raft/session_cache_test.cpp)
 target_link_libraries(raft_test
   PRIVATE
-  gmock
-  gtest
-  gtest_main
-  maelstromdb_lib)
-
-add_executable(
-  raft_bench
-  bench/test.cpp)
-target_link_libraries(raft_bench
-  PRIVATE
-  benchmark
+  GTest::gmock
+  GTest::gtest
+  GTest::gtest_main
   maelstromdb_lib)
 
 include(GoogleTest)

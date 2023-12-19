@@ -11,7 +11,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ./maelstromcli create -l node1:3000
+    command: ./bin/maelstromcli create -l node1:3000
     ports:
       - 3001:3000
     restart: unless-stopped
@@ -22,7 +22,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ./maelstromcli create node2:3000
+    command: ./bin/maelstromcli create node2:3000
     ports:
       - 3002:3000
     restart: unless-stopped
@@ -33,7 +33,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ./maelstromcli create node3:3000
+    command: ./bin/maelstromcli create node3:3000
     ports:
       - 3003:3000
     restart: unless-stopped
