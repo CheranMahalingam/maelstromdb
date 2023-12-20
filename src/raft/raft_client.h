@@ -9,7 +9,6 @@
 #include <unordered_map>
 
 #include "consensus_module.h"
-#include "logger.h"
 #include "raft.grpc.pb.h"
 
 namespace raft {

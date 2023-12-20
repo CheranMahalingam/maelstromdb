@@ -11,6 +11,7 @@ class MaelstromDB(ConanFile):
     def requirements(self):
         self.requires("grpc/1.54.3")
         self.requires("protobuf/3.21.12")
+        self.requires("glog/0.6.0")
 
     def build_requirements(self):
         self.build_requires("cmake/3.27.7")

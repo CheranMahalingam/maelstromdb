@@ -6,8 +6,6 @@
 #include <string>
 #include <unordered_set>
 
-#include "logger.h"
-
 #include "raft.grpc.pb.h"
 
 namespace raft {

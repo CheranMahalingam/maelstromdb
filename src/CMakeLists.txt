@@ -48,12 +48,12 @@ add_library(maelstromdb_lib
   cli/create.cpp
   cli/reconfigure.cpp
   cli/query.cpp
-  cli/write.cpp
-  utils/logger.cpp)
+  cli/write.cpp)
 target_link_libraries(maelstromdb_lib
   PUBLIC
   grpc_raft_proto
-  grpc_log_proto)
+  grpc_log_proto
+  glog::glog)
 target_include_directories(maelstromdb_lib
   PUBLIC
   core

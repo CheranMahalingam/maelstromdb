@@ -7,7 +7,8 @@
 #include <memory>
 
 #include "consensus_module.h"
-#include "logger.h"
+#include "grpcpp/ext/proto_server_reflection_plugin.h"
+#include "grpcpp/health_check_service_interface.h"
 #include "raft_client.h"
 #include "raft.grpc.pb.h"
 

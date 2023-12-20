@@ -1,5 +1,8 @@
+#include <glog/logging.h>
+
 #include "global_ctx_manager.h"
 #include "storage.h"
+#include <algorithm>
 
 namespace raft {
 
@@ -104,6 +107,7 @@ void PersistedLog::Page::TruncateSuffix(int removal_index) {
     std::filesystem::rename(dir + filename, dir + new_filename);
     filename = new_filename;
   }
+
 }
 
 std::string PersistedLog::Page::ClosedFilename() const {
@@ -175,8 +179,7 @@ int PersistedLog::LastLogTerm() const {
 
 protocol::log::LogEntry PersistedLog::Entry(const int idx) const {
   if (idx > LastLogIndex() || idx < 0) {
-    Logger::Error("Raft log index out of bounds, index =", idx, "last_log_index =", LastLogIndex());
-    throw std::out_of_range("Raft log index out of bounds");
+    LOG(FATAL) << "Raft log index out of bounds, index = " << idx << " last_log_index = " << LastLogIndex();
   }
 
   // Upper bound gets page with start_index > idx so that previous page in map is correct page
@@ -188,8 +191,7 @@ protocol::log::LogEntry PersistedLog::Entry(const int idx) const {
 
 std::vector<protocol::log::LogEntry> PersistedLog::Entries(int start, int end) const {
   if (start > end || end > LastLogIndex() + 1 || start < 0) {
-    Logger::Error("Raft log slice query invalid, start =", start, "end =", end, "last_log_index =", LastLogIndex());
-    throw std::out_of_range("Raft log slice query invalid");
+    LOG(FATAL) << "Raft log slice query invalid, start = " << start << " end = " << end << " last_log_index = " << LastLogIndex();
   }
 
   std::vector<Page::Record> query_records;
@@ -238,7 +240,7 @@ std::tuple<int, bool> PersistedLog::LatestConfiguration(protocol::log::Configura
 }
 
 int PersistedLog::Append(protocol::log::LogEntry& new_entry) {
-  Logger::Debug("Appending", OPCODE_NAME.at(new_entry.type()), "entry to raft log...");
+  DLOG(INFO) << "Appending " << OPCODE_NAME.at(new_entry.type()) << " entry to raft log...";
   int log_index = LogSize();
   PersistLogEntries({new_entry});
   return log_index;
@@ -252,7 +254,7 @@ std::pair<int, int> PersistedLog::Append(const std::vector<protocol::log::LogEnt
 }
 
 void PersistedLog::TruncateSuffix(const int removal_index) {
-  Logger::Debug("Attempting to truncate log at index =", removal_index);
+  DLOG(INFO) << "Attempting to truncate log at index = " << removal_index;
 
   if (removal_index > LastLogIndex()) {
     return;
@@ -353,8 +355,7 @@ void PersistedLog::PersistMetadata(const std::string& metadata_path) {
 
   bool success = google::protobuf::util::SerializeDelimitedToOstream(m_metadata, &out);
   if (!success) {
-    Logger::Error("Unexpected serialization failure when persisting raft metadata to disk");
-    throw std::runtime_error("Unable to serialize raft metadata");
+    LOG(FATAL) << "Unexpected serialization failure when persisting raft metadata to disk";
   }
   out.flush();
 }
@@ -376,8 +377,7 @@ void PersistedLog::PersistLogEntries(const std::vector<protocol::log::LogEntry>&
 
     success = m_open_page->WriteLogEntry(out, entry);
     if (!success) {
-      Logger::Error("Unexpected serialization failure when persisting raft log to disk");
-      throw std::runtime_error("Unable to serialize raft log");
+      LOG(FATAL) << "Unexpected serialization failure when persisting raft log to disk";
     }
 
     m_log_size++;
@@ -399,7 +399,7 @@ std::vector<PersistedLog::Page::Record> PersistedLog::LoadLogEntries(const std::
     log_entries.push_back(Page::Record(offset, temp_log_entry));
   }
 
-  Logger::Debug("Restored log entries from disk, size =", log_entries.size());
+  DLOG(INFO) << "Restored log entries from disk, size = " << log_entries.size();
 
   return log_entries;
 }
@@ -412,8 +412,7 @@ void PersistedLog::LoadMetadata(const std::string& metadata_path) {
 
   bool success = google::protobuf::util::ParseDelimitedFromZeroCopyStream(&metadata, &metadata_stream, nullptr);
   if (!success) {
-    Logger::Error("Unable to restore metadata from disk");
-    throw std::runtime_error("Unable to restore metadata");
+    LOG(FATAL) << "Unable to restore metadata from disk";
   }
 
   // Retrieve the metadata with the higher version number
@@ -421,7 +420,7 @@ void PersistedLog::LoadMetadata(const std::string& metadata_path) {
     return;
   }
 
-  Logger::Debug("Restored metadata from disk, term =", metadata.term(), "vote =", metadata.vote());
+  DLOG(INFO) << "Restored metadata from disk, term = " << metadata.term() << " vote = " << metadata.vote();
 
   m_metadata = metadata;
 }

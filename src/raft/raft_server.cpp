@@ -1,3 +1,5 @@
+#include <glog/logging.h>
+
 #include "raft_server.h"
 #include "global_ctx_manager.h"
 
@@ -36,7 +38,7 @@ void RaftServerImpl::ServerInit() {
   builder.RegisterService(&m_service);
   m_scq = builder.AddCompletionQueue();
   m_server = builder.BuildAndStart();
-  Logger::Info("Server listening on", m_ctx.address);
+  DLOG(INFO) << "Server listening on " << m_ctx.address;
 
   RPCEventLoop();
 }
@@ -86,7 +88,7 @@ void RaftServerImpl::RPCEventLoop() {
         }
       }    
     } else {
-      Logger::Info("RPC call failed unexpectedly");
+      LOG(WARNING) << "RPC call failed unexpectedly";
     }
   }
 }
@@ -115,7 +117,7 @@ void RaftServerImpl::RequestVoteData::Proceed() {
       break;
     }
     case CallStatus::PROCESS: {
-      Logger::Debug("Processing RequestVote reply...");
+      DLOG(INFO) << "Processing RequestVote reply...";
       new RequestVoteData(m_ctx, m_service, m_scq);
 
       auto [m_response, s] = m_ctx.ConsensusInstance()->ProcessRequestVoteClientRequest(m_request);
@@ -154,7 +156,7 @@ void RaftServerImpl::AppendEntriesData::Proceed() {
       break;
     }
     case CallStatus::PROCESS: {
-      Logger::Debug("Processing AppendEntries reply...");
+      DLOG(INFO) << "Processing AppendEntries reply...";
       new AppendEntriesData(m_ctx, m_service, m_scq);
 
       auto [m_response, s] = m_ctx.ConsensusInstance()->ProcessAppendEntriesClientRequest(m_request);
@@ -193,7 +195,7 @@ void RaftServerImpl::SetConfigurationData::Proceed() {
       break;
     }
     case CallStatus::PROCESS: {
-      Logger::Debug("Processing SetConfiguration reply...");
+      DLOG(INFO) << "Processing SetConfiguration reply...";
       new SetConfigurationData(m_ctx, m_service, m_scq);
 
       auto [m_response, s] = m_ctx.ConsensusInstance()->ProcessSetConfigurationClientRequest(m_request);
@@ -232,7 +234,7 @@ void RaftServerImpl::GetConfigurationData::Proceed() {
       break;
     }
     case CallStatus::PROCESS: {
-      Logger::Debug("Processing GetConfiguration reply...");
+      DLOG(INFO) << "Processing GetConfiguration reply...";
       new GetConfigurationData(m_ctx, m_service, m_scq);
 
       auto [m_response, s] = m_ctx.ConsensusInstance()->ProcessGetConfigurationClientRequest();
@@ -271,7 +273,7 @@ void RaftServerImpl::RegisterClientData::Proceed() {
       break;
     }
     case CallStatus::PROCESS: {
-      Logger::Debug("Processing RegisterClient reply...");
+      DLOG(INFO) << "Processing RegisterClient reply...";
       new RegisterClientData(m_ctx, m_service, m_scq);
 
       auto [m_response, s] = m_ctx.ConsensusInstance()->ProcessRegisterClientClientRequest();
@@ -309,7 +311,7 @@ void RaftServerImpl::ClientRequestData::Proceed() {
       break;
     }
     case CallStatus::PROCESS: {
-      Logger::Debug("Processing ClientRequest reply...");
+      DLOG(INFO) << "Processing ClientRequest reply...";
       new ClientRequestData(m_ctx, m_service, m_scq);
 
       auto [m_response, s] = m_ctx.ConsensusInstance()->ProcessClientRequestClientRequest(m_request);
@@ -348,7 +350,7 @@ void RaftServerImpl::ClientQueryData::Proceed() {
       break;
     }
     case CallStatus::PROCESS: {
-      Logger::Debug("Processing ClientQuery reply...");
+      DLOG(INFO) << "Processing ClientQuery reply...";
       new ClientQueryData(m_ctx, m_service, m_scq);
 
       auto [m_response, s] = m_ctx.ConsensusInstance()->ProcessClientQueryClientRequest(m_request);
@@ -362,7 +364,6 @@ void RaftServerImpl::ClientQueryData::Proceed() {
     }
   }
 }
-
 
 }
 

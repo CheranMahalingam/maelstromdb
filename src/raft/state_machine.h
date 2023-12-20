@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "inmemory_store.h"
-#include "logger.h"
 #include "raft.grpc.pb.h"
 #include "session_cache.h"
 

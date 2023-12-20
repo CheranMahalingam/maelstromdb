@@ -1,3 +1,5 @@
+#include <glog/logging.h>
+
 #include "session_cache.h"
 
 namespace raft {
@@ -6,7 +8,7 @@ SessionCache::SessionCache(int size) : m_session_cache(size) {
 }
 
 void SessionCache::AddSession(int client_id) {
-  Logger::Debug("Adding session with id", client_id, "to session cache");
+  DLOG(INFO) << "Adding session with id " << client_id << " to session cache";
   m_session_cache.CreateNode(client_id);
 }
 

@@ -1,8 +1,8 @@
+#include <glog/logging.h>
 #include <iostream>
 #include <string>
 
 #include "create.h"
-#include "logger.h"
 #include "query.h"
 #include "reconfigure.h"
 #include "write.h"
@@ -48,10 +48,9 @@ private:
 }
 
 int main(int argc, char* argv[]) {
-  Logger::SetLevel(Logger::LogLevel::DEBUG);
-  Logger::SetLogConsole();
-  cli::MaelstromCLI cli;
+  google::InitGoogleLogging(argv[0]);
 
+  cli::MaelstromCLI cli;
   cli.Execute(argc, argv);
 
   return 0;

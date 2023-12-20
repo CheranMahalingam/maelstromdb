@@ -3,7 +3,6 @@
 
 #include "global_ctx_manager.h"
 #include "log.grpc.pb.h"
-#include "logger.h"
 #include "storage.h"
 
 namespace raft {
@@ -11,7 +10,6 @@ namespace raft {
 class LogTestBase : public ::testing::Test {
 protected:
   void SetUp(const int count, const int max_file_size = 1024*8) {
-    Logger::SetLevel(Logger::LogLevel::DEBUG);
     log = std::make_unique<PersistedLog>(
         std::filesystem::current_path().string() + "/test_log/",
         false,
@@ -40,7 +38,6 @@ protected:
 class MetadataTest : public ::testing::Test {
 protected:
   MetadataTest() {
-    Logger::SetLevel(Logger::LogLevel::DEBUG);
     log = std::make_unique<PersistedLog>(
         std::filesystem::current_path().string() + "/test_log/");
   }

@@ -59,9 +59,6 @@ std::shared_ptr<FakeTimer> BuildFakeTimer(std::function<void()>&& callback) {
 class ConsensusModuleTest: public ::testing::Test {
 protected:
   void SetUp() override {
-    Logger::SetLevel(Logger::LogLevel::DEBUG);
-    Logger::SetLogConsole();
-
     std::string fake_address = "localhost:test";
     ctx = new GlobalCtxManager(fake_address);
     auto cm = ctx->ConsensusInstance();

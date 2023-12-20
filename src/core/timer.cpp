@@ -1,3 +1,5 @@
+#include <glog/logging.h>
+
 #include "timer.h"
 
 namespace core {
@@ -142,8 +144,7 @@ void TimerQueue::AddTimer(std::shared_ptr<TimerEvent> timer) {
   std::unique_lock<std::mutex> lock(m_lock);
 
   if (m_abort) {
-    Logger::Error("Unable to schedule task, timer queue process was aborted");
-    throw std::runtime_error("Timer queue process was aborted");
+    LOG(FATAL) << "Unable to schedule task, timer queue process was aborted";
   }
 
   auto prev_thread = UpdateWorkerThread(lock);

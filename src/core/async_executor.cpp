@@ -1,3 +1,5 @@
+#include <glog/logging.h>
+
 #include "async_executor.h"
 
 namespace core {
@@ -23,8 +25,7 @@ Strand::~Strand() {
 void Strand::Enqueue(callback_t callback) {
   std::unique_lock<std::mutex> lock(m_lock);
   if (m_abort) {
-    Logger::Error("Unable to execute callback, executor process has been aborted");
-    throw std::runtime_error("Executor process has been aborted");
+    LOG(FATAL) << "Unable to execute callback, executor process has been aborted";
   }
 
   m_request_queue.push(std::move(callback));

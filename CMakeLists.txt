@@ -28,7 +28,7 @@ endif()
 
 find_package(Protobuf REQUIRED)
 find_package(gRPC REQUIRED)
-find_package(benchmark REQUIRED)
+find_package(glog REQUIRED)
 
 message(STATUS "Using googletest ${GTest_VERSION}")
 message(STATUS "Using protobuf ${Protobuf_VERSION}")
@@ -52,6 +52,8 @@ endif()
 option(MAELSTROMDB_BUILD_TESTS "Set on/off to enable/disable maelstromdb unit tests" ON)
 if(MAELSTROMDB_BUILD_TESTS)
   find_package(GTest REQUIRED)
+  find_package(benchmark REQUIRED)
+
   enable_testing()
   add_subdirectory(tests)
 endif()

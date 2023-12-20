@@ -17,7 +17,6 @@
 #include "async_executor.h"
 #include "cluster_configuration.h"
 #include "inmemory_store.h"
-#include "logger.h"
 #include "raft.grpc.pb.h"
 #include "session_cache.h"
 #include "state_machine.h"

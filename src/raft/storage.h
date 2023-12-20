@@ -15,7 +15,6 @@
 #include <vector>
 
 #include "async_executor.h"
-#include "logger.h"
 #include "log.grpc.pb.h"
 
 namespace raft {

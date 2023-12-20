@@ -1,3 +1,5 @@
+#include <glog/logging.h>
+
 #include "consensus_module.h"
 #include "global_ctx_manager.h"
 #include "raft_client.h"
@@ -39,7 +41,7 @@ void ConsensusModule::StateMachineInit() {
   int log_index;
   std::tie(log_index, ok) = m_ctx.LogInstance()->LatestConfiguration(configuration);
   if (ok) {
-    Logger::Debug("Restored cluster configuration from disk with id =", log_index);
+    DLOG(INFO) << "Restored cluster configuration from disk with id = " << log_index;
     m_configuration->SetConfiguration(log_index, configuration);
   }
 
@@ -113,15 +115,15 @@ std::string ConsensusModule::LeaderHint() const {
 }
 
 void ConsensusModule::ElectionCallback(const int term) {
-  Logger::Debug("Starting election");
+  DLOG(INFO) << "Starting election";
 
   if (State() != RaftState::CANDIDATE && State() != RaftState::FOLLOWER) {
-    Logger::Debug("Consensus module state invalid for election");
+    DLOG(INFO) << "Consensus module state invalid for election";
     return;
   }
 
   if (Term() != term) {
-    Logger::Debug("Term changed from", term, "to", Term());
+    DLOG(INFO) << "Term changed from " << term << " to " << Term();
     return;
   }
 
@@ -152,7 +154,7 @@ void ConsensusModule::ElectionCallback(const int term) {
     if (peer_id == m_ctx.address) {
       continue;
     }
-    Logger::Debug("Sending RequestVote rpc to", peer_id);
+    DLOG(INFO) << "Sending RequestVote rpc to " << peer_id;
 
     m_ctx.ClientInstance()->RequestVote(
         peer_id,
@@ -167,7 +169,7 @@ void ConsensusModule::ElectionCallback(const int term) {
 
 void ConsensusModule::HeartbeatCallback() {
   if (State() != RaftState::LEADER) {
-    Logger::Debug("Invalid state for sending heartbeat");
+    DLOG(INFO) << "Invalid state for sending heartbeat";
     return;
   }
 
@@ -180,7 +182,7 @@ void ConsensusModule::HeartbeatCallback() {
     if (peer_id == m_ctx.address) {
       continue;
     }
-    Logger::Debug("Sending AppendEntries rpc to", peer_id);
+    DLOG(INFO) << "Sending AppendEntries rpc to " << peer_id;
 
     int next = m_next_index[peer_id];
     int prev_log_index = next - 1;
@@ -190,7 +192,6 @@ void ConsensusModule::HeartbeatCallback() {
     }
 
     auto entries = m_ctx.LogInstance()->Entries(next, m_ctx.LogInstance()->LogSize());
-
     m_ctx.ClientInstance()->AppendEntries(
         peer_id,
         saved_term,
@@ -213,7 +214,7 @@ void ConsensusModule::ScheduleElection(const int term) {
   std::uniform_int_distribution<> distr(ELECTION_TIMEOUT, ELECTION_TIMEOUT + 150);
   int random_timeout = distr(gen);
 
-  Logger::Debug("Election timer created:", random_timeout, "ms");
+  DLOG(INFO) << "Election timer created: " << random_timeout << " ms";
   m_election_timer->Reset(
       std::bind(&ConsensusModule::ElectionCallback, this, term),
       random_timeout);
@@ -229,7 +230,7 @@ void ConsensusModule::Shutdown() {
   m_heartbeat_timer->Cancel();
 
   m_state.store(RaftState::DEAD);
-  Logger::Info("Node shutdown");
+  LOG(INFO) << "Node shutdown";
 }
 
 void ConsensusModule::ResetToFollower(const int term) {
@@ -239,7 +240,7 @@ void ConsensusModule::ResetToFollower(const int term) {
   m_term.store(term);
   m_vote = "";
   m_votes_received = 0;
-  Logger::Debug("Reset to follower, term:", Term());
+  DLOG(INFO) << "Reset to follower, term: " << Term();
 
   m_heartbeat_timer->Cancel();
   m_lease_timer->Cancel();
@@ -255,7 +256,7 @@ void ConsensusModule::PromoteToLeader() {
   m_state.store(RaftState::LEADER);
   m_votes_received = 0;
   m_leader_id = m_ctx.address;
-  Logger::Debug("Promoted to leader, term:", Term());
+  DLOG(INFO) << "Promoted to leader, term: " << Term();
 
   m_election_timer->Cancel();
 
@@ -281,7 +282,7 @@ void ConsensusModule::StoreState() const {
   metadata.set_term(Term());
   metadata.set_vote(m_vote);
   m_ctx.LogInstance()->SetMetadata(metadata);
-  Logger::Debug("Persisted metadata to disk, term =", Term(), "vote =", m_vote);
+  DLOG(INFO) << "Persisted metadata to disk, term = " << Term() << " vote = " << m_vote;
 }
 
 int ConsensusModule::Append(protocol::log::LogEntry& log_entry) {
@@ -348,7 +349,7 @@ void ConsensusModule::UpdateCommitIndex() {
 
   if (new_commit_index != saved_commit_index) {
     m_commit_index.store(new_commit_index);
-    Logger::Debug("Leader set commit_index =", new_commit_index);
+    DLOG(INFO) << "Leader set commit_index = " << new_commit_index;
 
     int next_log_index = m_state_machine->LastApplied();
     std::vector<protocol::log::LogEntry> uncommited_entries;
@@ -366,13 +367,13 @@ void ConsensusModule::UpdateCommitIndex() {
     m_membership_sync.notify_one();
 
     if (!m_configuration->KnownServer(m_ctx.address)) {
-      Logger::Debug("Committed configuration does not include LEADER, resetting to FOLLOWER...");
+      DLOG(INFO) << "Committed configuration does not include LEADER, resetting to FOLLOWER...";
       ResetToFollower(Term() + 1);
       return;
     }
 
     if (m_configuration->State() == ClusterConfiguration::ConfigurationState::JOINT) {
-      Logger::Debug("Transitioning to new cluster configuration...");
+      DLOG(INFO) << "Transitioning to new cluster configuration...";
       protocol::log::LogEntry entry;
       entry.set_term(Term());
       entry.set_type(protocol::log::CONFIGURATION);
@@ -401,14 +402,14 @@ std::tuple<protocol::raft::RequestVote_Response, grpc::Status> ConsensusModule::
   }
 
   if (clock_type::now() <= m_election_deadline || State() == RaftState::LEADER) {
-    Logger::Debug("Rejecting RequestVote RPC from", request.candidateid(), ", since this node recently received a heartbeat");
+    DLOG(INFO) << "Rejecting RequestVote RPC from " << request.candidateid() << " since this node recently received a heartbeat";
     reply.set_votegranted(false);
     reply.set_term(Term());
     return std::make_tuple(reply, grpc::Status::OK);
   }
 
   if (request.term() > Term()) {
-    Logger::Debug("Term out of date in RequestVote RPC, changed from", Term(), "to", request.term());
+    DLOG(INFO) << "Term out of date in RequestVote RPC, changed from " << Term() << " to " << request.term();
     ResetToFollower(request.term());
   }
 
@@ -439,12 +440,12 @@ void ConsensusModule::ProcessRequestVoteServerResponse(
     protocol::raft::RequestVote_Response& reply,
     const std::string& address) {
   if (State() != RaftState::CANDIDATE) {
-    Logger::Debug("Node changed state while waiting for RequestVote reply");
+    DLOG(INFO) << "Node changed state while waiting for RequestVote reply";
     return;
   }
 
   if (reply.term() > request.term()) {
-    Logger::Debug("Term out of date in election reply, changed from", request.term(), "to", reply.term());
+    DLOG(INFO) << "Term out of date in election reply, changed from " << request.term() << " to " << reply.term();
     ResetToFollower(reply.term());
     return;
   } else if (reply.term() == request.term()) {
@@ -453,7 +454,7 @@ void ConsensusModule::ProcessRequestVoteServerResponse(
 
       // If CANDIDATE receives majority of votes it becomes the new leader
       if (m_votes_received*2 > m_configuration->ServerAddresses().size()) {
-        Logger::Debug("Wins election with", m_votes_received, "votes");
+        DLOG(INFO) << "Wins election with " << m_votes_received << " votes";
         PromoteToLeader();
         return;
       }
@@ -470,7 +471,7 @@ std::tuple<protocol::raft::AppendEntries_Response, grpc::Status> ConsensusModule
   }
 
   if (request.term() > Term()) {
-    Logger::Debug("Term out of date in AppendEntries RPC, changed from", Term(), "to", request.term());
+    DLOG(INFO) << "Term out of date in AppendEntries RPC, changed from " << Term() << "to" << request.term();
     ResetToFollower(request.term());
   }
 
@@ -517,7 +518,7 @@ std::tuple<protocol::raft::AppendEntries_Response, grpc::Status> ConsensusModule
         int saved_commit_index = CommitIndex();
         int new_commit_index = std::min((int)request.leadercommit(), m_ctx.LogInstance()->LogSize());
         m_commit_index.store(new_commit_index);
-        Logger::Debug("Setting commit index =", new_commit_index);
+        DLOG(INFO) << "Setting commit index = " << new_commit_index;
 
         int next_log_index = m_state_machine->LastApplied();
         std::vector<protocol::log::LogEntry> uncommited_entries;
@@ -550,7 +551,7 @@ void ConsensusModule::ProcessAppendEntriesServerResponse(
     protocol::raft::AppendEntries_Response& reply,
     const std::string& address) {
   if (reply.term() > request.term()) {
-    Logger::Debug("Term out of date in heartbeat reply, changed from", request.term(), "to", reply.term());
+    DLOG(INFO) << "Term out of date in heartbeat reply, changed from " << request.term() << " to " << reply.term();
     m_leader_id = "";
     ResetToFollower(reply.term());
   }
@@ -561,7 +562,7 @@ void ConsensusModule::ProcessAppendEntriesServerResponse(
       // If heartbeat is successful for majority, reads can be served
       m_responding_peers.insert(address);
       if (m_renew_lease.load() && m_configuration->CheckQuorum(m_responding_peers)) {
-        Logger::Debug("Leader lease acquired");
+        DLOG(INFO) << "Leader lease acquired";
         int commit_delay = std::chrono::duration_cast<milliseconds>(clock_type::now() - m_heartbeat_time).count();
         int lease_expiry = LEADER_LEASE_TIMEOUT - commit_delay;
         m_lease_timer->Reset(lease_expiry);
@@ -571,7 +572,8 @@ void ConsensusModule::ProcessAppendEntriesServerResponse(
       // Update next and match index since all entries in request were replicated on FOLLOWER
       m_next_index[address] = next + request.entries().size();
       m_match_index[address] = next + request.entries().size() - 1;
-      Logger::Debug("AppendEntries reply from", address, "successful: next_index =", m_next_index[address], "match_index =", m_match_index[address]);
+      DLOG(INFO) << "AppendEntries reply from " << address << "successful: next_index = " << m_next_index[address]
+        << "match_index = " << m_match_index[address];
 
       if (m_configuration->UpdateSyncProgress(address, m_match_index[address])) {
         m_membership_sync.notify_one();
@@ -582,7 +584,7 @@ void ConsensusModule::ProcessAppendEntriesServerResponse(
       // If the AppendEntries RPC was unsuccessful the prevLogIndex for the specific node is decremented.
       // This will continue until a raft log entry with a matching term is found.
       m_next_index[address] = next - 1;
-      Logger::Debug("AppendEntries reply from", address, "unsuccessful: next_index =", next);
+      DLOG(INFO) << "AppendEntries reply from " << address << " unsuccessful: next_index = " << next;
     }
   }
 }
@@ -662,7 +664,7 @@ std::tuple<protocol::raft::SetConfiguration_Response, grpc::Status> ConsensusMod
       return std::make_tuple(reply, err);
     }
   }
-  Logger::Debug("Log syncing with new servers complete");
+  DLOG(INFO) << "Log syncing with new servers complete";
 
   protocol::log::LogEntry configuration_entry;
   configuration_entry.set_term(Term());
@@ -678,7 +680,7 @@ std::tuple<protocol::raft::SetConfiguration_Response, grpc::Status> ConsensusMod
   });
 
   if (m_configuration->Id() > joint_id && CommitIndex() >= m_configuration->Id()) {
-    Logger::Debug("Configuration log entry committed successfully");
+    DLOG(INFO) << "Configuration log entry committed successfully";
     reply.set_ok(true);
     return std::make_tuple(reply, grpc::Status::OK);
   } else {

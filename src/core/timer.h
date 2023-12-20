@@ -11,7 +11,6 @@
 #include <type_traits>
 
 #include "async_executor.h"
-#include "logger.h"
 
 namespace core {
 

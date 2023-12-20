@@ -11,8 +11,6 @@
 #include <thread>
 #include <queue>
 
-#include "logger.h"
-
 namespace core {
 
 class AsyncExecutor {

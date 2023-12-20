@@ -1,3 +1,5 @@
+#include <glog/logging.h>
+
 #include "cluster_configuration.h"
 
 namespace raft {
@@ -12,14 +14,13 @@ protocol::log::Configuration ClusterConfiguration::Configuration() const {
 
 protocol::log::Configuration ClusterConfiguration::Configuration(int id) const {
   if (m_configurations.find(id) == m_configurations.end()) {
-    Logger::Error("Cluster configuration at log index =", id, "does not exist");
-    throw std::out_of_range("No configuration in log at index: " + std::to_string(id));
+    LOG(FATAL) << "Cluster configuration at log index = " << id << " does not exist";
   }
   return m_configurations.at(id);
 }
 
 void ClusterConfiguration::SetConfiguration(int new_id, const protocol::log::Configuration& configuration) {
-  Logger::Debug("Updating cluster configuration with id =", new_id);
+  LOG(INFO) << "Updating cluster configuration with id = " << new_id;
   if (configuration.next_configuration().size() == 0) {
     SetState(ConfigurationState::STABLE);
   } else {
@@ -107,7 +108,7 @@ bool ClusterConfiguration::CheckQuorum(std::unordered_set<std::string> peer_vote
 }
 
 void ClusterConfiguration::StartLogSync(int commit_index, const std::vector<std::string>& new_servers) {
-  Logger::Debug("Starting membership change log sync...");
+  DLOG(INFO) << "Starting membership change log sync...";
   std::vector<std::string> sync_servers;
   for (auto& server:new_servers) {
     if (!KnownServer(server)) {

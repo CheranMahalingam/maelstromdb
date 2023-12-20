@@ -1,3 +1,5 @@
+#include <glog/logging.h>
+
 #include "raft_client.h"
 #include "global_ctx_manager.h"
 #include "raft.pb.h"
@@ -52,7 +54,7 @@ void RaftClientImpl::RequestVote(
   request_args.set_lastlogterm(last_log_term);
 
   if (!m_stubs[peer_id]) {
-    Logger::Debug("Server at", peer_id, "disconnected");
+    DLOG(INFO) << "Server at " << peer_id << " disconnected";
     return;
   }
 
@@ -89,7 +91,7 @@ void RaftClientImpl::AppendEntries(
   }
 
   if (!m_stubs[peer_id]) {
-    Logger::Debug("Server at", peer_id, "disconnected");
+    LOG(WARNING) << "Server at " << peer_id << " disconnected";
     return;
   }
 
@@ -135,7 +137,7 @@ void RaftClientImpl::AsyncCompleteRPC() {
         break;
       }
       default: {
-        Logger::Error("Invalid client ID");
+        LOG(ERROR) << "Invalid client ID";
       }
     }
 
@@ -146,25 +148,25 @@ void RaftClientImpl::AsyncCompleteRPC() {
 void RaftClientImpl::HandleRequestVoteReply(AsyncClientCall<protocol::raft::RequestVote_Request,
       protocol::raft::RequestVote_Response>* call) {
   if (!call->status.ok()) {
-    Logger::Info("RequestVote call failed unexpectedly"); 
+    LOG(ERROR) << "RequestVote call failed unexpectedly"; 
     return;
   }
 
   m_ctx.ConsensusInstance()->ProcessRequestVoteServerResponse(call->request, call->reply, call->peer_address);
 
-  Logger::Debug("RequestVote call was received");
+  DLOG(INFO) << "RequestVote call was received";
 }
 
 void RaftClientImpl::HandleAppendEntriesReply(AsyncClientCall<protocol::raft::AppendEntries_Request,
       protocol::raft::AppendEntries_Response>* call) {
   if (!call->status.ok()) {
-    Logger::Info("AppendEntries call failed unexpectedly");
+    LOG(ERROR) << "AppendEntries call failed unexpectedly";
     return;
   }
 
   m_ctx.ConsensusInstance()->ProcessAppendEntriesServerResponse(call->request, call->reply, call->peer_address);
 
-  Logger::Debug("AppendEntries call was received");
+  DLOG(INFO) << "AppendEntries call was received";
 }
 
 }
